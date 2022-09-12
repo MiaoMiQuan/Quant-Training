@@ -12,7 +12,7 @@ global stock_info
 stock_info = ak.stock_zh_a_spot_em()  #获取个股信息汇总
 stock_info['代码'] = stock_info['代码'].astype('int64')  # 代码转换为int64
 stock_info = stock_info.set_index('代码')  # 代码设置成index
-stock_info.to_csv('全股信息.csv', encoding='utf_8_sig')  # 输出至csv
+stock_info.to_csv('全部股票信息.csv', encoding='utf_8_sig')  # 输出至csv
 
 def add_pbpe_info(df):
     df['市盈率-动态']=stock_info[stock_info.index.isin(df.index)]['市盈率-动态']  #从接口获取市盈率信息
@@ -23,7 +23,7 @@ def add_pbpe_info(df):
     return df
 
 def show_index_current_pbpe(index):
-    file=iop.index_dic[index]+'.csv'   #找到要读的文件
+    file=iop.index_dic[index]+'构成.csv'   #找到要读的文件
     df=pd.read_csv(file)
     print(iop.index_dic[index],'总计PE:',round(np.sum(df['总市值'])/np.sum(df['盈利']),2))      #算总计PE
     # print(iop.index_dic[index],'的加权PE:',round(100/np.sum(df['权重']/df['总市值']*df['盈利']),2))
@@ -52,7 +52,7 @@ def save_index_history(index):
     history_point = history_point.set_index('trade_date')   #用日期当索引
     history_point = history_point['close']  #用收盘价做当日指数点位
     #估值相关数据获取
-    index_madeup = pd.read_csv(iop.index_dic[index] + '.csv')  #读取指数csv，获取指数组成
+    index_madeup = pd.read_csv(iop.index_dic[index] + '构成.csv')  #读取指数csv，获取指数组成
     index_stock_df = index_madeup['成分券代码']  #找到指数成分券的代码
     res = pd.DataFrame()
     for index_stock in index_stock_df:
@@ -62,16 +62,22 @@ def save_index_history(index):
     res['净资产'] = res['total_mv'] / res['pb']   #用市净率反推净资产
     res_after = res.groupby('trade_date').sum()  #对日期聚合，粒度变为日期粒度
     res_after['after_pe_ttm'] = res_after['total_mv'] / res_after['盈利']  #计算该指数每日总体市盈率-动态
-    res_after['after_pb_ttm'] = res_after['total_mv'] / res_after['净资产']  #计算该指数每日总体市净率
+    res_after['after_pb'] = res_after['total_mv'] / res_after['净资产']  #计算该指数每日总体市净率
     res_after.index = res_after.index.astype('datetime64[ns]')  #转为规范日期格式
     #点位、估值数据融合
     res_after['close'] = history_point[history_point.index.isin(res_after.index)]   #用日期当索引，融合每日估值情况和每日点位情况
     output = res_after.dropna(axis=0, how='any')  #扔掉有空值的行
+    output=output[['after_pe_ttm','after_pb','close']]
+    output.rename(columns={'after_pe_ttm': 'pe_ttm','after_pb':'pb','close':'point'}, inplace=True)
+    output.to_csv(iop.index_dic[index]+'历史.csv', encoding='utf_8_sig')  #输出指数点位、估值历史至csv
+    return output
+
+def draw_index_history(output,index):
     #画图部分
     x = output.index
-    y1 = output['close']
-    y2 = output['after_pe_ttm']
-    y3 = output['after_pb_ttm']
+    y1 = output['point']
+    y2 = output['pe_ttm']
+    y3 = output['pb']
     #左轴
     fig, ax1 = plt.subplots()
     ax1.set_xlabel('日期', fontproperties="SimHei")  #设置x轴名称

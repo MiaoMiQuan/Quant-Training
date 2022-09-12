@@ -29,11 +29,12 @@ if __name__ == '__main__':
         index_component=rf.add_pbpe_info(index_component)    #补充相关信息
         index_component = index_component.sort_values(by=['权重'],ascending=False)     #把指数信息按指数权重排序
         #输出阶段
-        index_component.to_csv(index_dic[index_num]+'.csv',encoding='utf_8_sig')     #指数全部信息输出至csv
+        index_component.to_csv(index_dic[index_num]+'构成.csv',encoding='utf_8_sig')     #指数全部信息输出至csv
         rf.show_index_current_pbpe(index_num)      #展示指数当前的pb、pe信息
         rf.show_index_current_point(index_to_index_withregion[index_num])      #展示指数当前点位
         rf.buy_target_point_distance_E(index_to_index_withregion[index_num])  #展示现价比E大的目标点位高多少
-        rf.save_index_history(index_num)  #打印并保存指数历史趋势图
+        history_info=rf.save_index_history(index_num)   #保存指数点位、估值历史信息库
+        rf.draw_index_history(history_info,index_num)  #打印并保存指数历史趋势图
         #结束阶段
         end_time_single=datetime.datetime.now()
         time_used_single=end_time_single-start_time_single
