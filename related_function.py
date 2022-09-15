@@ -6,6 +6,7 @@ import akshare as ak
 import main_info_output as iop
 import matplotlib
 import matplotlib.pyplot as plt
+import datetime
 matplotlib.rc("font", family='Microsoft YaHei')  #避免输出格式错误
 
 global stock_info
@@ -25,10 +26,8 @@ def add_pbpe_info(df):
 def show_index_current_pbpe(index):
     file=iop.index_dic[index]+'构成.csv'   #找到要读的文件
     df=pd.read_csv(file)
-    print(iop.index_dic[index],'总计PE:',round(np.sum(df['总市值'])/np.sum(df['盈利']),2))      #算总计PE
-    # print(iop.index_dic[index],'的加权PE:',round(100/np.sum(df['权重']/df['总市值']*df['盈利']),2))
-    print(iop.index_dic[index],'总计PB:',round(np.sum(df['总市值'])/np.sum(df['净资产']),2))      #算总计PB
-    # print(iop.index_dic[index],'的加权PB:',round(100/np.sum(df['权重']/df['总市值']*df['净资产']),2))
+    print(iop.index_dic[index],'总计PE:',round(np.sum(df[df['盈利']>0]['总市值'])/np.sum(df[df['盈利']>0]['盈利']),2))      #算总计PE，盈利为负的剔除
+    print(iop.index_dic[index],'总计PB:',round(np.sum(df[df['净资产']>0]['总市值'])/np.sum(df[df['净资产']>0]['净资产']),2))      #算总计PB，净资产为负的剔除
 
 def show_index_current_point(index):
     print(iop.index_dic_withregion[index], '指数目前点位:', ak.stock_zh_index_daily_em(symbol=index).iloc[-1].loc['close'])  #输出指数目前点位
@@ -56,14 +55,17 @@ def save_index_history(index):
     index_stock_df = index_madeup['成分券代码']  #找到指数成分券的代码
     res = pd.DataFrame()
     for index_stock in index_stock_df:
-        stock_history = ak.stock_a_lg_indicator(index_stock)  #读某个指数组成股的历史数据
+        stock_history = ak.stock_a_lg_indicator(str(index_stock).rjust(6,'0'))  #读某个指数组成股的历史数据
+        stock_history['code']=index_stock
         res = pd.concat([res, stock_history])  #把该指数组成股的历史数据，融合到该指数所有成分股的历史数据大表中，融合后粒度为成分股(300or500个)*日期(5000天)，百万量级
     res['盈利'] = res['total_mv'] / res['pe_ttm']  #用市盈率反推盈利
     res['净资产'] = res['total_mv'] / res['pb']   #用市净率反推净资产
-    res_after = res.groupby('trade_date').sum()  #对日期聚合，粒度变为日期粒度
+    res_positive=res[res['盈利']>0]  #只保留当日盈利为正数的记录
+    res_positive['trade_date'].value_counts().sort_index(ascending=False).to_csv(iop.index_dic[index]+'数量.csv',encoding='utf_8_sig') #统计过去每天，该指数中目前盈利（可以计算市盈率）的公司有多少个
+    res_after = res_positive.groupby('trade_date').sum()  #对日期聚合，粒度变为日期粒度
     res_after['after_pe_ttm'] = res_after['total_mv'] / res_after['盈利']  #计算该指数每日总体市盈率-动态
     res_after['after_pb'] = res_after['total_mv'] / res_after['净资产']  #计算该指数每日总体市净率
-    res_after.index = res_after.index.astype('datetime64[ns]')  #转为规范日期格式
+    res_after.index= pd.to_datetime(res_after.index)
     #点位、估值数据融合
     res_after['close'] = history_point[history_point.index.isin(res_after.index)]   #用日期当索引，融合每日估值情况和每日点位情况
     output = res_after.dropna(axis=0, how='any')  #扔掉有空值的行
