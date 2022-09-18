@@ -23,26 +23,6 @@ def add_pbpe_info(df):
     df['净资产']=stock_info[stock_info.index.isin(df.index)]['总市值']/stock_info[stock_info.index.isin(df.index)]['市净率']    #用市净率反推净资产
     return df
 
-def show_index_current_pbpe(index):
-    file=iop.index_dic[index]+'构成.csv'   #找到要读的文件
-    df=pd.read_csv(file)
-    print(iop.index_dic[index],'总计PE:',round(np.sum(df[df['盈利']>0]['总市值'])/np.sum(df[df['盈利']>0]['盈利']),2))      #算总计PE，盈利为负的剔除
-    print(iop.index_dic[index],'总计PB:',round(np.sum(df[df['净资产']>0]['总市值'])/np.sum(df[df['净资产']>0]['净资产']),2))      #算总计PB，净资产为负的剔除
-
-def show_index_current_point(index):
-    print(iop.index_dic_withregion[index], '指数目前点位:', ak.stock_zh_index_daily_em(symbol=index).iloc[-1].loc['close'])  #输出指数目前点位
-
-def buy_target_point_distance_E(index):
-    current=ak.stock_zh_index_daily_em(symbol=index).iloc[-1].loc['close']    #获取指数目前点位
-    target=iop.buy_target_point_E[iop.index_dic_withregion[index]]    #mapping到字典里E大推荐的支撑位
-    try:
-        res=int(current)/int(target)
-    except ZeroDivisionError:
-        print('E大没给支撑位')
-    else:
-        print(iop.index_dic_withregion[index],'指数支撑位:',iop.buy_target_point_E[iop.index_dic_withregion[index]])  #输出写死的支撑位
-        print('现价比支撑位高:','{:.2%}'.format(current/target-1))    #计算目前价格比支撑位高出的百分比
-
 def save_index_history(index):
     #点位相关数据获取
     history_point = ak.stock_zh_index_daily_em(symbol=iop.index_to_index_withregion[index])  #获取指数历史点位数据
@@ -61,7 +41,7 @@ def save_index_history(index):
     res['盈利'] = res['total_mv'] / res['pe_ttm']  #用市盈率反推盈利
     res['净资产'] = res['total_mv'] / res['pb']   #用市净率反推净资产
     res_positive=res[res['盈利']>0]  #只保留当日盈利为正数的记录
-    res_positive['trade_date'].value_counts().sort_index(ascending=False).to_csv(iop.index_dic[index]+'数量.csv',encoding='utf_8_sig') #统计过去每天，该指数中目前盈利（可以计算市盈率）的公司有多少个
+    # res_positive['trade_date'].value_counts().sort_index(ascending=False).to_csv(iop.index_dic[index]+'数量.csv',encoding='utf_8_sig') #统计过去每天，该指数中目前盈利（可以计算市盈率）的公司有多少个
     res_after = res_positive.groupby('trade_date').sum()  #对日期聚合，粒度变为日期粒度
     res_after['after_pe_ttm'] = res_after['total_mv'] / res_after['盈利']  #计算该指数每日总体市盈率-动态
     res_after['after_pb'] = res_after['total_mv'] / res_after['净资产']  #计算该指数每日总体市净率
@@ -74,7 +54,79 @@ def save_index_history(index):
     output.to_csv(iop.index_dic[index]+'历史.csv', encoding='utf_8_sig')  #输出指数点位、估值历史至csv
     return output
 
-def draw_index_history(output,index):
+def show_index_current_point(output,index):
+    print(iop.index_dic[index], '指数目前点位:', output.iloc[-1]['point'])  #输出指数目前点位
+    iop.to_write_file.write(iop.index_dic[index])
+    iop.to_write_file.write('指数目前点位:')
+    iop.to_write_file.write(str(output.iloc[-1]['point']))
+    iop.to_write_file.write('\n')
+
+def buy_target_point_distance_E(index):
+    current=ak.stock_zh_index_daily_em(symbol=index).iloc[-1].loc['close']    #获取指数目前点位
+    target=iop.buy_target_point_E[iop.index_dic_withregion[index]]    #mapping到字典里E大推荐的支撑位
+    try:
+        res=int(current)/int(target)
+    except ZeroDivisionError:
+        print('E大没给支撑位')
+        iop.to_write_file.write('E大没给支撑位\n')
+    else:
+        print(iop.index_dic_withregion[index],'指数支撑位:',iop.buy_target_point_E[iop.index_dic_withregion[index]])  #输出写死的支撑位
+        iop.to_write_file.write(iop.index_dic_withregion[index])
+        iop.to_write_file.write('指数支撑位:')
+        iop.to_write_file.write(str(iop.buy_target_point_E[iop.index_dic_withregion[index]]))
+        iop.to_write_file.write('\n')
+        print('现价比支撑位高:','{:.2%}'.format(current/target-1))    #计算目前价格比支撑位高出的百分比
+        iop.to_write_file.write('现价比支撑位高:')
+        iop.to_write_file.write('{:.2%}'.format(current/target-1))
+        iop.to_write_file.write('\n')
+
+def show_index_current_pbpe(output,index):
+    print(iop.index_dic[index],'目前PE:',round(output.iloc[-1]['pe_ttm'],2))      #算总计PE，盈利为负的剔除
+    iop.to_write_file.write(iop.index_dic[index])
+    iop.to_write_file.write('目前PE:')
+    iop.to_write_file.write(str(round(output.iloc[-1]['pe_ttm'],2)))
+    iop.to_write_file.write('\n')
+    print(iop.index_dic[index],'目前PB:',round(output.iloc[-1]['pb'],2))      #算总计PB，净资产为负的剔除
+    iop.to_write_file.write(iop.index_dic[index])
+    iop.to_write_file.write('目前PB:')
+    iop.to_write_file.write(str(round(output.iloc[-1]['pb'],2)))
+    iop.to_write_file.write('\n')
+
+def pbpe_history_5years(output,index):
+    output_5years=output.tail(1250)
+    num_smaller_pe=len(output_5years[output_5years['pe_ttm']<output_5years.iloc[-1]['pe_ttm']])
+    num_smaller_pb = len(output_5years[output_5years['pb'] < output_5years.iloc[-1]['pb']])
+    pe_percent=num_smaller_pe/len(output_5years)
+    pb_percent=num_smaller_pb/len(output_5years)
+    print(iop.index_dic[index],'目前PE位于近5年','{:.2%}'.format(pe_percent),'百分位')
+    iop.to_write_file.write(iop.index_dic[index])
+    iop.to_write_file.write('目前PE位于近5年')
+    iop.to_write_file.write('{:.2%}'.format(pe_percent))
+    iop.to_write_file.write('百分位\n')
+    print(iop.index_dic[index], '目前PB位于近5年', '{:.2%}'.format(pb_percent), '百分位')
+    iop.to_write_file.write(iop.index_dic[index])
+    iop.to_write_file.write('目前PB位于近5年')
+    iop.to_write_file.write('{:.2%}'.format(pb_percent))
+    iop.to_write_file.write('百分位\n')
+
+def pbpe_history_10years(output,index):
+    output_10years=output.tail(2500)
+    num_smaller_pe=len(output_10years[output_10years['pe_ttm']<output_10years.iloc[-1]['pe_ttm']])
+    num_smaller_pb = len(output_10years[output_10years['pb'] < output_10years.iloc[-1]['pb']])
+    pe_percent=num_smaller_pe/len(output_10years)
+    pb_percent=num_smaller_pb/len(output_10years)
+    print(iop.index_dic[index],'目前PE位于近10年','{:.2%}'.format(pe_percent),'百分位')
+    iop.to_write_file.write(iop.index_dic[index])
+    iop.to_write_file.write('目前PE位于近10年')
+    iop.to_write_file.write('{:.2%}'.format(pe_percent))
+    iop.to_write_file.write('百分位\n')
+    print(iop.index_dic[index], '目前PB位于近10年', '{:.2%}'.format(pb_percent), '百分位')
+    iop.to_write_file.write(iop.index_dic[index])
+    iop.to_write_file.write('目前PB位于近10年')
+    iop.to_write_file.write('{:.2%}'.format(pb_percent))
+    iop.to_write_file.write('百分位\n')
+
+def draw_index_history(output,index,name):
     #画图部分
     x = output.index
     y1 = output['point']
@@ -93,8 +145,10 @@ def draw_index_history(output,index):
     ax2.plot(x, y3 * 10, color='yellow', linewidth=0.5, label='市净率*10')  #画右轴-市净率*10(不乘10的话数值太小，无法显示)
     ax2.legend(loc='upper right')  #标签画在右上角
     #画图其他
-    plt.title(iop.index_dic[index]+'指数历史点位/估值图') #设置标题
+    plt.title(iop.index_dic[index]+name+'点位/估值图') #设置标题
     fig.tight_layout()  #结构展开
-    plt.savefig(iop.index_dic[index])  #保存图片
-    print(iop.index_dic[index],'指数历史点位/估值图完成保存')
+    plt.savefig(iop.index_dic[index]+name)  #保存图片
     plt.close()
+
+def end():
+    iop.to_write_file.write('------------------------------------------------------------\n')
