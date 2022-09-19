@@ -93,7 +93,10 @@ def show_index_current_pbpe(output,index):
     iop.to_write_file.write('\n')
 
 def pbpe_history_5years(output,index):
-    output_5years=output.tail(1250)
+    if len(output)<=1250:
+        output_5years=output
+    else:
+        output_5years=output.tail(1250)
     num_smaller_pe=len(output_5years[output_5years['pe_ttm']<output_5years.iloc[-1]['pe_ttm']])
     num_smaller_pb = len(output_5years[output_5years['pb'] < output_5years.iloc[-1]['pb']])
     pe_percent=num_smaller_pe/len(output_5years)
@@ -110,7 +113,10 @@ def pbpe_history_5years(output,index):
     iop.to_write_file.write('百分位\n')
 
 def pbpe_history_10years(output,index):
-    output_10years=output.tail(2500)
+    if len(output)<=2500:
+        output_10years=output
+    else:
+        output_10years=output.tail(2500)
     num_smaller_pe=len(output_10years[output_10years['pe_ttm']<output_10years.iloc[-1]['pe_ttm']])
     num_smaller_pb = len(output_10years[output_10years['pb'] < output_10years.iloc[-1]['pb']])
     pe_percent=num_smaller_pe/len(output_10years)
