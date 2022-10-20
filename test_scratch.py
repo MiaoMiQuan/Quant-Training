@@ -10,6 +10,6 @@ import main_info_output as iop
 import datetime
 import os
 
-print(os.getcwd())
-os.chdir('D:\\Python_Project\\Quant_Training\\上证50')
-os.chdir('D:\\Python_Project\\Quant_Training')
+index_stock=
+stock_a_lg_indicator_df = ak.stock_a_lg_indicator(symbol=str(index_stock).rjust(6,'0'))
+print(stock_a_lg_indicator_df)
