@@ -42,18 +42,10 @@ def save_index_history(index):
         res['盈利'] = res['total_mv'] / res['pe_ttm']  #用市盈率反推盈利
         res['净资产'] = res['total_mv'] / res['pb']   #用市净率反推净资产
         res_positive=res[res['盈利']>0]  #只保留当日盈利为正数的记录
-        # res_positive['trade_date'].value_counts().sort_index(ascending=False).to_csv(iop.index_dic[index]+'数量.csv',encoding='utf_8_sig') #统计过去每天，该指数中目前盈利（可以计算市盈率）的公司有多少个
         res_after = res_positive.groupby('trade_date').sum()  #对日期聚合，粒度变为日期粒度
         res_after['after_pe_ttm'] = res_after['total_mv'] / res_after['盈利']  #计算该指数每日总体市盈率-动态
         res_after['after_pb'] = res_after['total_mv'] / res_after['净资产']  #计算该指数每日总体市净率
         res_after.index= pd.to_datetime(res_after.index)
-        #点位、估值数据融合
-        res_after['close'] = history_point[history_point.index.isin(res_after.index)]   #用日期当索引，融合每日估值情况和每日点位情况
-        output = res_after.dropna(axis=0, how='any')  #扔掉有空值的行
-        output=output[['after_pe_ttm','after_pb','close']]
-        output.rename(columns={'after_pe_ttm': 'pe_ttm','after_pb':'pb','close':'point'}, inplace=True)
-        output.to_csv(iop.index_dic[index]+'历史.csv', encoding='utf_8_sig')  #输出指数点位、估值历史至csv
-        return output
     else:
         index_madeup = pd.read_csv(iop.index_dic[index] + '构成.csv')  # 读取指数csv，获取指数组成
         index_stock_df = index_madeup['成分券代码']  # 找到指数成分券的代码
@@ -69,20 +61,18 @@ def save_index_history(index):
         res['weighted_total_mv']=res['total_mv']*res['weight']
         res['weighted_盈利'] = res['盈利'] * res['weight']
         res['weighted_净资产'] = res['净资产'] * res['weight']
-        res.head(50).to_csv('test.csv', encoding='utf_8_sig')
         res_positive=res[res['盈利']>0]  #只保留当日盈利为正数的记录
         res_after = res_positive.groupby('trade_date').sum()  #对日期聚合，粒度变为日期粒度
         res_after['after_pe_ttm'] = res_after['weighted_total_mv'] / res_after['weighted_盈利']  #计算该指数每日总体市盈率-动态
         res_after['after_pb'] = res_after['weighted_total_mv'] / res_after['weighted_净资产']  #计算该指数每日总体市净率
         res_after.index= pd.to_datetime(res_after.index)
-        #点位、估值数据融合
-        res_after['close'] = history_point[history_point.index.isin(res_after.index)]   #用日期当索引，融合每日估值情况和每日点位情况
-        output = res_after.dropna(axis=0, how='any')  #扔掉有空值的行
-        output=output[['after_pe_ttm','after_pb','close']]
-        output.rename(columns={'after_pe_ttm': 'pe_ttm','after_pb':'pb','close':'point'}, inplace=True)
-        output.to_csv(iop.index_dic[index]+'历史.csv', encoding='utf_8_sig')  #输出指数点位、估值历史至csv
-        return output
-
+    #点位、估值数据融合
+    res_after['close'] = history_point[history_point.index.isin(res_after.index)]   #用日期当索引，融合每日估值情况和每日点位情况
+    output = res_after.dropna(axis=0, how='any')  #扔掉有空值的行
+    output=output[['after_pe_ttm','after_pb','close']]
+    output.rename(columns={'after_pe_ttm': 'pe_ttm','after_pb':'pb','close':'point'}, inplace=True)
+    output.to_csv(iop.index_dic[index]+'历史.csv', encoding='utf_8_sig')  #输出指数点位、估值历史至csv
+    return output
 
 def show_index_current_point(output,index):
     print(iop.index_dic[index], '指数目前点位:', output.iloc[-1]['point'])  #输出指数目前点位
